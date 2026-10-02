@@ -1,0 +1,21 @@
+<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CuanMahasiswa</title>
+<style>
+body{font-family:Arial;margin:0;background:#f5f7fb;color:#172033}.wrap{max-width:520px;margin:auto;padding:20px}.card{background:white;border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 4px 18px #0001}.btn{background:#176b4d;color:#fff;border:0;padding:12px 16px;border-radius:10px;font-weight:700}.input{width:100%;padding:12px;margin:6px 0 10px;border:1px solid #ddd;border-radius:9px;box-sizing:border-box}.muted{color:#697386}.money{font-size:30px;font-weight:800}
+</style></head><body><div class="wrap"><h1>CuanMahasiswa</h1><p class="muted">Marketplace pekerjaan kecil untuk mahasiswa.</p>
+<div id="auth" class="card"><h3>Masuk / Daftar</h3><input id="name" class="input" placeholder="Nama (untuk daftar)"><input id="email" class="input" placeholder="Email"><input id="pass" class="input" type="password" placeholder="Password">
+<button class="btn" onclick="register()">Daftar mahasiswa</button> <button class="btn" onclick="login()">Masuk</button><p id="msg"></p></div>
+<div id="main" style="display:none"><div class="card"><div class="muted">Saldo tersedia</div><div class="money" id="balance">Rp0</div></div><button class="btn" onclick="loadTasks()">Muat tugas</button><div id="tasks"></div>
+<div class="card"><h3>Tarik saldo</h3><input id="amount" class="input" type="number" placeholder="Nominal"><input id="method" class="input" placeholder="Metode: bank/e-wallet"><input id="dest" class="input" placeholder="Nomor rekening/e-wallet"><button class="btn" onclick="withdraw()">Ajukan pencairan</button></div></div></div>
+<script>
+let token=localStorage.token; const API=location.origin;
+async function req(path,opt={}){opt.headers={...(opt.headers||{}),'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})};let r=await fetch(API+path,opt);let j=await r.json();if(!r.ok)throw Error(j.error||'Gagal');return j}
+async function login(){try{let j=await req('/api/login',{method:'POST',body:JSON.stringify({email:email.value,password:pass.value})});token=j.token;localStorage.token=token;start()}catch(e){msg.textContent=e.message}}
+async function register(){try{let j=await req('/api/register',{method:'POST',body:JSON.stringify({name:name.value,email:email.value,password:pass.value,role:'student'})});token=j.token;localStorage.token=token;start()}catch(e){msg.textContent=e.message}}
+async function start(){auth.style.display='none';main.style.display='block';wallet();loadTasks()}
+async function wallet(){let j=await req('/api/wallet');balance.textContent='Rp'+Number(j.balance).toLocaleString('id-ID')}
+async function loadTasks(){let j=await req('/api/tasks');tasks.innerHTML=j.map(t=>`<div class="card"><b>${esc(t.title)}</b><p>${esc(t.description)}</p><span>Reward: Rp${Number(t.student_reward).toLocaleString('id-ID')}</span><br><button class="btn" onclick="claim(${t.id})">Ambil tugas</button></div>`).join('')||'<div class="card">Belum ada tugas aktif.</div>'}
+async function claim(id){try{await req('/api/tasks/'+id+'/claim',{method:'POST'});alert('Tugas berhasil diambil. Kirim hasil melalui menu submission saat endpoint submission UI ditambahkan.');loadTasks()}catch(e){alert(e.message)}}
+async function withdraw(){try{let j=await req('/api/withdrawals',{method:'POST',body:JSON.stringify({amount:Number(amount.value),method:method.value,destination:dest.value})});alert(j.message);wallet()}catch(e){alert(e.message)}}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+if(token)start();
+</script></body></html>
